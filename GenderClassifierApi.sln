@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenderClassifierApi", "src\GenderClassifierApi\GenderClassifierApi.csproj", "{8DAB5F67-0B79-4A5D-9B95-7CC9B3B5A111}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenderClassifierApi.Tests", "tests\GenderClassifierApi.Tests\GenderClassifierApi.Tests.csproj", "{8A2D4C44-65FD-4D37-9E72-5A20A7C5B222}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8DAB5F67-0B79-4A5D-9B95-7CC9B3B5A111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DAB5F67-0B79-4A5D-9B95-7CC9B3B5A111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DAB5F67-0B79-4A5D-9B95-7CC9B3B5A111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DAB5F67-0B79-4A5D-9B95-7CC9B3B5A111}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A2D4C44-65FD-4D37-9E72-5A20A7C5B222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A2D4C44-65FD-4D37-9E72-5A20A7C5B222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A2D4C44-65FD-4D37-9E72-5A20A7C5B222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A2D4C44-65FD-4D37-9E72-5A20A7C5B222}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
