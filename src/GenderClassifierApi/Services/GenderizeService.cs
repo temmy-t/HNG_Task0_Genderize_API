@@ -1,17 +1,23 @@
+using GenderClassifierApi.Models;
+using Microsoft.Extensions.Caching.Memory;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
-using GenderClassifierApi.Models;
 
 namespace GenderClassifierApi.Services;
 
 public sealed class GenderizeService : IGenderizeService
 {
     private readonly HttpClient _httpClient;
+    private readonly IMemoryCache _cache;
+    private readonly ILogger<GenderizeService> _logger;
 
-    public GenderizeService(HttpClient httpClient)
+
+    public GenderizeService(HttpClient httpClient, IMemoryCache cache, ILogger<GenderizeService> logger)
     {
         _httpClient = httpClient;
+        _cache = cache;
+        _logger = logger;
     }
 
     public async Task<(int StatusCode, object Payload)> ClassifyAsync(string name, CancellationToken cancellationToken)
@@ -28,42 +34,63 @@ public sealed class GenderizeService : IGenderizeService
             return (StatusCodes.Status422UnprocessableEntity, new ErrorEnvelope("name is not a string"));
         }
 
+        var cacheKey = $"genderize:{normalizedName.ToLowerInvariant()}";
+
         GenderizeResponse? upstream;
 
-        try
+        if (!_cache.TryGetValue(cacheKey, out upstream))
         {
-            var response = await _httpClient.GetAsync($"?name={Uri.EscapeDataString(normalizedName)}", cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream service returned an error"));
+                var response = await _httpClient.GetAsync(
+                    $"?name={Uri.EscapeDataString(normalizedName)}",
+                    cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream service returned an error"));
+                }
+
+                upstream = await response.Content.ReadFromJsonAsync<GenderizeResponse>(
+                    cancellationToken: cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream request timed out"));
+            }
+            catch (HttpRequestException)
+            {
+                return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream request failed"));
+            }
+            catch (NotSupportedException)
+            {
+                return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
             }
 
-            upstream = await response.Content.ReadFromJsonAsync<GenderizeResponse>(cancellationToken: cancellationToken);
-        }
-        catch (TaskCanceledException)
-        {
-            return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream request timed out"));
-        }
-        catch (HttpRequestException)
-        {
-            return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream request failed"));
-        }
-        catch (NotSupportedException)
-        {
-            return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
+            if (upstream is null)
+            {
+                return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
+            }
+
+            if (string.IsNullOrWhiteSpace(upstream.Gender) || upstream.Count == 0)
+            {
+                return (StatusCodes.Status422UnprocessableEntity, new ErrorEnvelope("No prediction available for the provided name"));
+            }
+
+            _cache.Set(
+                cacheKey,
+                upstream,
+                new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                });
         }
 
-        if (upstream is null)
-        {
-            return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
-        }
-
-        if (string.IsNullOrWhiteSpace(upstream.Gender) || upstream.Count == 0)
+        if (string.IsNullOrWhiteSpace(upstream?.Gender) || upstream.Count == 0)
         {
             return (StatusCodes.Status422UnprocessableEntity, new ErrorEnvelope("No prediction available for the provided name"));
         }
@@ -72,22 +99,19 @@ public sealed class GenderizeService : IGenderizeService
         bool confidenceCondition = probability >= 0.7d && upstream.Count >= 100;
         string utcTime = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
-        var isConfident = confidenceCondition;
-        var processedAt = utcTime;
-
         var data = new ClassifyData
         {
             Name = normalizedName,
             Gender = upstream.Gender,
             Probability = probability,
             SampleSize = upstream.Count,
-            IsConfident = isConfident,
-            ProcessedAt = processedAt
+            IsConfident = confidenceCondition,
+            ProcessedAt = utcTime
         };
 
         return (StatusCodes.Status200OK, new SuccessEnvelope { Data = data });
     }
-
+    
     private static bool LooksLikeAName(string value)
     {
         var pattern = @"^[\p{L}\p{M}][\p{L}\p{M}\s'\-]*$";
