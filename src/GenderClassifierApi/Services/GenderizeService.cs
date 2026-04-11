@@ -26,11 +26,13 @@ public sealed class GenderizeService : IGenderizeService
 
         if (string.IsNullOrWhiteSpace(normalizedName))
         {
+            _logger.LogWarning("Bad request: name parameter is missing or empty");
             return (StatusCodes.Status400BadRequest, new ErrorEnvelope("Missing or empty name parameter"));
         }
 
         if (!LooksLikeAName(normalizedName))
         {
+            _logger.LogWarning("Unprocessable request: invalid name format received: {Name}", normalizedName);
             return (StatusCodes.Status422UnprocessableEntity, new ErrorEnvelope("name is not a string"));
         }
 
@@ -48,6 +50,9 @@ public sealed class GenderizeService : IGenderizeService
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    _logger.LogError("Genderize API returned non-success status code: {StatusCode}",
+                        (int)response.StatusCode);
+
                     return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream service returned an error"));
                 }
 
@@ -56,23 +61,28 @@ public sealed class GenderizeService : IGenderizeService
             }
             catch (TaskCanceledException)
             {
+                _logger.LogError("Genderize API request timed out");
                 return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream request timed out"));
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                _logger.LogError(ex, "Genderize API request failed");
                 return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Upstream request failed"));
             }
-            catch (NotSupportedException)
+            catch (NotSupportedException ex)
             {
+                _logger.LogError(ex, "Failed to parse Genderize API response");
                 return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
             }
-            catch (System.Text.Json.JsonException)
+            catch (System.Text.Json.JsonException ex)
             {
+                _logger.LogError(ex, "Invalid JSON returned from Genderize API");
                 return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
             }
 
             if (upstream is null)
             {
+                _logger.LogError("Genderize API response was null");
                 return (StatusCodes.Status502BadGateway, new ErrorEnvelope("Failed to parse upstream response"));
             }
 
@@ -97,7 +107,6 @@ public sealed class GenderizeService : IGenderizeService
 
         var probability = upstream.Probability ?? 0.0d;
         bool confidenceCondition = probability >= 0.7d && upstream.Count >= 100;
-        string utcTime = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
         var data = new ClassifyData
         {
@@ -106,12 +115,12 @@ public sealed class GenderizeService : IGenderizeService
             Probability = probability,
             SampleSize = upstream.Count,
             IsConfident = confidenceCondition,
-            ProcessedAt = utcTime
+            ProcessedAt = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture)
         };
 
         return (StatusCodes.Status200OK, new SuccessEnvelope { Data = data });
     }
-    
+
     private static bool LooksLikeAName(string value)
     {
         var pattern = @"^[\p{L}\p{M}][\p{L}\p{M}\s'\-]*$";
