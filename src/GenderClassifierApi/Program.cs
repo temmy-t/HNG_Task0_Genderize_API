@@ -22,6 +22,8 @@ builder.Services.AddHttpClient<IGenderizeService, GenderizeService>(client =>
 
 var app = builder.Build();
 
+app.Urls.Add("http://0.0.0.0:5000");
+
 app.UseHttpsRedirection();
 
 app.UseCors("OpenCors");
