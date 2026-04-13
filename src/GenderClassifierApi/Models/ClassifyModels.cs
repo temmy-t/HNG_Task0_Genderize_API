@@ -2,45 +2,45 @@ using System.Text.Json.Serialization;
 
 namespace GenderClassifierApi.Models;
 
+using System.Text.Json.Serialization;
+
 public sealed class ClassifyData
 {
     [JsonPropertyName("name")]
-    public string Name { get; init; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     [JsonPropertyName("gender")]
-    public string Gender { get; init; } = string.Empty;
+    public string Gender { get; set; } = string.Empty;
 
     [JsonPropertyName("probability")]
-    public double Probability { get; init; }
+    public double Probability { get; set; }
 
     [JsonPropertyName("sample_size")]
-    public int SampleSize { get; init; }
+    public int SampleSize { get; set; }
 
     [JsonPropertyName("is_confident")]
-    public bool IsConfident { get; init; }
+    public bool IsConfident { get; set; }
 
     [JsonPropertyName("processed_at")]
-    public string ProcessedAt { get; init; } = string.Empty;
+    public string ProcessedAt { get; set; } = string.Empty;
 }
 
 public sealed class SuccessEnvelope
 {
     [JsonPropertyName("status")]
-    public string Status { get; init; } = "success";
+    public string Status { get; set; } = "success";
 
     [JsonPropertyName("data")]
-    public ClassifyData Data { get; init; } = new();
+    public ClassifyData Data { get; set; } = new();
 }
 
 public sealed class ErrorEnvelope
 {
     [JsonPropertyName("status")]
-    public string Status { get; init; } = "error";
+    public string Status { get; set; } = "error";
 
     [JsonPropertyName("message")]
-    public string Message { get; init; } = string.Empty;
-
-    public ErrorEnvelope() { }
+    public string Message { get; set; }
 
     public ErrorEnvelope(string message)
     {

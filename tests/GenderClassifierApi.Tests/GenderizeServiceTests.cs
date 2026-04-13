@@ -1,9 +1,10 @@
-using System.Net;
 using GenderClassifierApi.Services;
+using GenderClassifierApi.Tests;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Net;
 using Xunit;
-
-namespace GenderClassifierApi.Tests;
 
 public sealed class GenderizeServiceTests
 {
@@ -20,15 +21,21 @@ public sealed class GenderizeServiceTests
             BaseAddress = new Uri("https://api.genderize.io/")
         };
 
-        var service = new GenderizeService(client);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var logger = NullLogger<GenderizeService>.Instance;
+
+        var service = new GenderizeService(client, cache, logger);
 
         var (statusCode, payload) = await service.ClassifyAsync("john", CancellationToken.None);
 
         var json = System.Text.Json.JsonSerializer.Serialize(payload);
+
         Assert.Equal(StatusCodes.Status200OK, statusCode);
         Assert.Contains("\"status\":\"success\"", json);
         Assert.Contains("\"sample_size\":1234", json);
         Assert.Contains("\"is_confident\":true", json);
+        Assert.Contains("\"gender\":\"male\"", json);
+        Assert.Contains("\"name\":\"john\"", json);
     }
 
     [Fact]
@@ -44,11 +51,15 @@ public sealed class GenderizeServiceTests
             BaseAddress = new Uri("https://api.genderize.io/")
         };
 
-        var service = new GenderizeService(client);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var logger = NullLogger<GenderizeService>.Instance;
+
+        var service = new GenderizeService(client, cache, logger);
 
         var (statusCode, payload) = await service.ClassifyAsync("unknown", CancellationToken.None);
 
         var json = System.Text.Json.JsonSerializer.Serialize(payload);
+
         Assert.Equal(StatusCodes.Status422UnprocessableEntity, statusCode);
         Assert.Contains("No prediction available for the provided name", json);
     }
@@ -64,11 +75,15 @@ public sealed class GenderizeServiceTests
             BaseAddress = new Uri("https://api.genderize.io/")
         };
 
-        var service = new GenderizeService(client);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var logger = NullLogger<GenderizeService>.Instance;
+
+        var service = new GenderizeService(client, cache, logger);
 
         var (statusCode, payload) = await service.ClassifyAsync("john", CancellationToken.None);
 
         var json = System.Text.Json.JsonSerializer.Serialize(payload);
+
         Assert.Equal(StatusCodes.Status502BadGateway, statusCode);
         Assert.Contains("Upstream service returned an error", json);
     }
