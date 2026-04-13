@@ -88,20 +88,29 @@ public sealed class GenderizeService : IGenderizeService
                 });
         }
 
-        if (string.IsNullOrWhiteSpace(upstream.Gender) || upstream.Count == 0)
+        if (upstream is null)
         {
-            return (StatusCodes.Status422UnprocessableEntity, new ErrorEnvelope("No prediction available for the provided name"));
+            return (StatusCodes.Status502BadGateway,
+                new ErrorEnvelope("Failed to parse upstream response"));
+        }
+
+        if (string.IsNullOrWhiteSpace(upstream.Gender) || upstream.Count <= 0)
+        {
+            return (StatusCodes.Status422UnprocessableEntity,
+                new ErrorEnvelope("No prediction available for the provided name"));
         }
 
         var probability = upstream.Probability ?? 0.0d;
+        var sampleSize = upstream.Count;
+        var isConfident = probability >= 0.7d && sampleSize >= 100;
 
         var data = new ClassifyData
         {
             Name = normalizedName,
             Gender = upstream.Gender,
             Probability = probability,
-            SampleSize = upstream.Count,
-            IsConfident = probability >= 0.7d && upstream.Count >= 100,
+            SampleSize = sampleSize,
+            IsConfident = isConfident,
             ProcessedAt = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture)
         };
 
