@@ -1,39 +1,95 @@
+# =========================
 # Build output
+# =========================
 bin/
 obj/
 publish/
+out/
 artifacts/
 
+# =========================
 # Visual Studio
+# =========================
 .vs/
 *.user
 *.suo
-*.cache
+*.userosscache
+*.sln.docstates
 
+# =========================
+# Rider / VS Code
+# =========================
+.idea/
+.vscode/
+
+# =========================
 # Test output
+# =========================
 TestResults/
 coverage/
+*.coverage
+*.coveragexml
 
-# Logs and temporary files
+# =========================
+# Logs and temp files
+# =========================
 *.log
+logs/
+tmp/
+temp/
 
-# Packages
+# =========================
+# Debug / symbol files
+# =========================
+*.pdb
+*.cache
+
+# =========================
+# NuGet / package artifacts
+# =========================
 *.nupkg
 *.snupkg
 
-# Database / local files
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Secrets / local environment
+# =========================
+.env
+.env.*
+secrets.json
+
+# Keep development settings out of Git only if you store secrets there
+# appsettings.Development.json
+
+# =========================
+# Publish profiles
+# =========================
+*.publish.xml
+*.pubxml
+*.pubxml.user
+
+# =========================
+# Database files
+# =========================
+*.mdf
+*.ldf
 *.sqlite
 *.db
 
-# Coverage files
-*.coverage
+# =========================
+# ReSharper / analysis
+# =========================
+_ReSharper*/
+*.DotSettings.user
 
-# Debug symbols
-*.pdb
-
-# Publish artifacts
-*.publish.xml
-
-# Environment files
-.env
-.env.*
+# =========================
+# AWS Elastic Beanstalk local metadata
+# Keep config if you need it, ignore everything else
+# =========================
+.elasticbeanstalk/*
+!.elasticbeanstalk/config.yml
